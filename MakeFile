@@ -1,0 +1,79 @@
+#Переменные
+DOCKER_COMPOSE = docker-compose -f docker-compose-local.yaml
+
+# Цель по умолчанию
+.DEFAULT_GOAL := help
+
+# Команды
+help:
+	@echo "Available commands:"
+	@echo "  make up            - Start all services in detached mode"
+	@echo "  make down          - Stop and remove containers, networks, and volumes"
+	@echo "  make build         - Build or rebuild all services"
+	@echo "  make restart       - Restart all services"
+	@echo "  make logs          - View logs of all services"
+	@echo "  make ps            - List containers"
+	@echo "  make web_build     - Build the image for the web service"
+	@echo "  make db_build      - Build the image for the db service"
+	@echo "  make web_logs      - View logs of the web service"
+	@echo "  make db_logs       - View logs of the db service"
+	@echo "  make clean         - Remove stopped containers and unused networks and volumes"
+
+up:
+	$(DOCKER_COMPOSE) up -d
+
+down:
+	$(DOCKER_COMPOSE) down && docker network prune --force
+
+build:
+	$(DOCKER_COMPOSE) build
+
+restart:
+	$(DOCKER_COMPOSE) restart
+
+logs:
+	$(DOCKER_COMPOSE) logs -f
+
+ps:
+	$(DOCKER_COMPOSE) ps
+
+web_build:
+	$(DOCKER_COMPOSE) build web
+
+db_build:
+	$(DOCKER_COMPOSE) build db
+
+web_logs:
+	$(DOCKER_COMPOSE) logs -f web
+
+db_logs:
+	$(DOCKER_COMPOSE) logs -f db
+
+clean:
+	$(DOCKER_COMPOSE) down -v
+	docker network prune -f
+	docker volume prune -f
+
+
+
+
+alembic_init:
+	$(DOCKER_COMPOSE) exec web alembic init -t async /code/app/db/migrations
+
+alembic_migrations:
+	$(DOCKER_COMPOSE) exec web alembic revision --autogenerate -m "Add field to post descriptions"
+
+alembic_head:
+	$(DOCKER_COMPOSE) exec web alembic upgrade head
+
+alembic_base:
+	$(DOCKER_COMPOSE) exec web alembic downgrade base
+
+
+
+
+rsa_private_key:
+	$(DOCKER_COMPOSE) exec web openssl genrsa -out app/config/certs/jwt-private.pem 2048
+
+rsa_public_key:
+	$(DOCKER_COMPOSE) exec web openssl rsa -in app/config/certs/jwt-private.pem -outform PEM -pubout -out app/config/certs/jwt-public.pem
